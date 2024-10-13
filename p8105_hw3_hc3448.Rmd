@@ -28,7 +28,7 @@ scale_fill_discrete = scale_fill_viridis_d
 ```
 
 ## Problem 2
-```{r}
+```{r message = FALSE}
 accel_df =
   read_csv("data/nhanes_accel.csv") |> 
   janitor::clean_names()
@@ -133,3 +133,99 @@ plot_inspection_activity
 Overall, the female has higher average activity than male. Over the day, the trend is similar. Most people have low average activity at minutes 0-500 and 1250-1500, which would be the normal sleeping time for most people. As for the difference for the three plots, people with the education level as less than high school has higher activity during worktime (morning till early afternoon) whereas the other two categories has similar acitvity during wake time (the whole day). 
 
 ## Problem 3
+```{r message = FALSE}
+jan20_df = 
+  read_csv("data/citibike/Jan 2020 Citi.csv") |>
+  janitor::clean_names() |> 
+  mutate(
+    month = "January",
+    year = "2020")
+
+jan24_df = 
+  read_csv("data/citibike/Jan 2024 Citi.csv") |>
+  janitor::clean_names() |> 
+  mutate(
+    month = "January",
+    year = "2024")
+
+jul20_df = 
+  read_csv("data/citibike/July 2020 Citi.csv") |>
+  janitor::clean_names() |> 
+  mutate(
+    month = "July",
+    year = "2020")
+
+jul24_df = 
+  read_csv("data/citibike/July 2024 Citi.csv") |>
+  janitor::clean_names() |> 
+  mutate(
+    month = "July",
+    year = "2024")
+
+citibike_df = bind_rows(jan20_df, jan24_df, jul20_df, jul24_df)
+```
+The dataset conbined all four months of the data. The variables are `r names(citibike_df)`. They provide the information including the time (month, year, which weekdays), the duration of the bike riding, what type of the bike and what kind of user (casual or member) it is, and the start/ end stations name.
+
+```{r}
+citibike_df |> 
+  group_by(year, month, member_casual) |> 
+  summarize(
+    count = n()) |> 
+  pivot_wider(
+    names_from = member_casual,
+    values_from = count) |> 
+  knitr::kable()
+```
+
+The table shows that overall during four months, the total number of rides among members are higher than casual riders. There are more rides in 2024 compared to 2020. Also, there are more rides in July than in January in both years.
+
+```{r}
+top5_start_station_df = 
+  citibike_df |>
+  filter(month == "July", year == "2024") |>
+  group_by(start_station_name) |> 
+  summarize(number_of_rides = n()) |> 
+  arrange(desc(number_of_rides)) |>
+  slice_max(number_of_rides, n = 5) 
+
+knitr::kable(top5_start_station_df)
+```
+```{r}
+median_duration_df = 
+  citibike_df |>
+  mutate(weekdays = factor(weekdays, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) |>
+  group_by(year, month, weekdays) |>
+  summarize(median_duration = median(duration), .groups = "drop")
+
+plot_weekday_duration = 
+  median_duration_df |>
+  ggplot(aes(x = weekdays, y = median_duration, group = month, color = month)) +
+  geom_line() +
+  facet_grid(.~ year) +
+  labs(
+    title = "Median Bike Rental Duration by Weekday across January and July of 2020 and 2024", 
+    x = "Weekdays", 
+    y = "Median Duration") +
+  theme(axis.text.x = element_text(angle = 45))
+plot_weekday_duration
+```
+
+The plot shows that the duration of rides in July during weekends are longer in both years. Comparing 2020 and 2024, the duration of bike rides decrease in both months.
+
+```{r}
+plot_impact = 
+  citibike_df |>
+  filter(year == 2024) |>
+  ggplot(aes(x = rideable_type, y = duration, fill = month)) +
+  geom_violin(alpha = 0.5) +
+  facet_grid(~ member_casual) +
+  labs(
+    title = "The impact of month, membership status, and bike type on the distribution of ride duration",
+    x = "Type of Bike",
+    y = "Duration"
+  )
+
+plot_impact
+```
+
+Most of the duration for both members and casual riders are below 50 minutes. For casual riders, the duration are more spread out within the 50 minutes. Whereas for the casual rider riding electric and the members, there are more rides with shorter duration.
