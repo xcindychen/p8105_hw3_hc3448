@@ -114,15 +114,16 @@ inspection_activity_df =
                names_to = "minute",
                names_prefix = "min",
                values_to = "activity") |>
-  group_by(minute, sex, education) |>
-  summarize(min_activity = mean(activity)) |>
+  #group_by(minute, sex, education) |>
+  #summarize(min_activity = mean(activity)) |>
   mutate(minute = as.numeric(minute))
 ```
+
 ```{r}
 plot_inspection_activity = inspection_activity_df |>
-  ggplot(aes(x = minute, y = min_activity, color = sex)) +
-  geom_point(alpha = 0.1) +
-  geom_smooth() +
+  ggplot(aes(x = minute, y = activity, color = sex)) +
+  geom_point(alpha = 0.1, size = 0.01) +
+  geom_smooth(size = 0.5) +
   facet_grid(. ~education) +
   labs(title = "24-hour activity time courses for each education level and sex", 
        x = "Minute",
